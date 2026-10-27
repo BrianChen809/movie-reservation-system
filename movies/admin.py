@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Genre, Movie
+from .models import Genre, Movie, Showtime
 
 @admin.register(Genre)
 class GenreAdmin(admin.ModelAdmin):
@@ -12,3 +12,9 @@ class MovieAdmin(admin.ModelAdmin):
     search_fields = ("title",)
     list_filter = ("genres",)
     filter_horizontal = ("genres",)
+
+@admin.register(Showtime)
+class ShowtimeAdmin(admin.ModelAdmin):
+    list_display = ("movie", "starts_at")
+    list_filter = ("movie", "starts_at")
+    ordering = ("starts_at",)

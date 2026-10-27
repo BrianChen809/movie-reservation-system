@@ -15,3 +15,14 @@ class Movie(models.Model):
 
     def __str__(self):
         return self.title
+
+class Showtime(models.Model):
+    movie = models.ForeignKey(
+        Movie,
+        on_delete=models.PROTECT,
+        related_name="showtimes",
+    )
+    starts_at = models.DateTimeField()
+
+    def __str__(self):
+        return f"{self.movie.title} — {self.starts_at}"
