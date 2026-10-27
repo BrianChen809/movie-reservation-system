@@ -1,6 +1,12 @@
 from django.contrib import admin
 
-from .models import Auditorium, Genre, Movie, Showtime
+from .models import Auditorium, Genre, Movie, Seat, Showtime
+
+@admin.register(Seat)
+class SeatAdmin(admin.ModelAdmin):
+    list_display = ("auditorium", "row", "number")
+    list_filter = ("auditorium",)
+    ordering = ("auditorium", "row", "number")
 
 @admin.register(Genre)
 class GenreAdmin(admin.ModelAdmin):

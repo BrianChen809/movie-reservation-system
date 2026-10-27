@@ -22,6 +22,31 @@ class Auditorium(models.Model):
     def __str__(self):
         return self.name
 
+class Seat(models.Model):
+    auditorium = models.ForeignKey(
+        Auditorium,
+        on_delete=models.PROTECT,
+        related_name="seats",
+    )
+    row = models.CharField(max_length=5)
+    number = models.PositiveIntegerField()
+
+    class Meta:
+        ordering = ("row", "number")
+        constraints = [
+            models.UniqueConstraint(
+                fields=["auditorium", "row", "number"],
+                name="unique_seat_per_auditorium",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(number__gte=1),
+                name="seat_number_at_least_one",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.auditorium.name} — {self.row}{self.number}"
+
 class Showtime(models.Model):
     movie = models.ForeignKey(
         Movie,
