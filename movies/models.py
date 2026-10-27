@@ -16,6 +16,12 @@ class Movie(models.Model):
     def __str__(self):
         return self.title
 
+class Auditorium(models.Model):
+    name = models.CharField(max_length=100, unique=True)
+
+    def __str__(self):
+        return self.name
+
 class Showtime(models.Model):
     movie = models.ForeignKey(
         Movie,
@@ -23,6 +29,11 @@ class Showtime(models.Model):
         related_name="showtimes",
     )
     starts_at = models.DateTimeField()
+    auditorium = models.ForeignKey(
+        Auditorium,
+        on_delete=models.PROTECT,
+        related_name="showtimes",
+    )
 
     def __str__(self):
         return f"{self.movie.title} — {self.starts_at}"
