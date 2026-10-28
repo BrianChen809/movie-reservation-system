@@ -83,12 +83,14 @@ class Reservation(models.Model):
         related_name="reservations",
     )
     created_at = models.DateTimeField(auto_now_add=True)
+    cancelled_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         constraints = [
             models.UniqueConstraint(
                 fields=["showtime", "seat"],
-                name="unique_reservation_per_showtime_seat",
+                condition=models.Q(cancelled_at__isnull=True),
+                name="unique_active_reservation_per_showtime_seat",
             ),
         ]
 
