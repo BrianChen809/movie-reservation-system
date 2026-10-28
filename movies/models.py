@@ -1,4 +1,7 @@
 from django.db import models
+from django.conf import settings
+from django.core.exceptions import ValidationError
+from django.utils import timezone
 
 class Genre(models.Model):
     name = models.CharField(max_length=50, unique=True)
@@ -62,3 +65,46 @@ class Showtime(models.Model):
 
     def __str__(self):
         return f"{self.movie.title} — {self.starts_at}"
+
+class Reservation(models.Model):
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="reservations",
+    )
+    showtime = models.ForeignKey(
+        Showtime,
+        on_delete=models.PROTECT,
+        related_name="reservations",
+    )
+    seat = models.ForeignKey(
+        Seat,
+        on_delete=models.PROTECT,
+        related_name="reservations",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["showtime", "seat"],
+                name="unique_reservation_per_showtime_seat",
+            ),
+        ]
+
+    def clean(self):
+        super().clean()
+
+        if self.showtime_id and self.seat_id:
+            if self.seat.auditorium_id != self.showtime.auditorium_id:
+                raise ValidationError({
+                    "seat": "Choose a seat in the showtime's auditorium."
+                })
+        if self.showtime_id and self._state.adding:
+            if self.showtime.starts_at <= timezone.now():
+                raise ValidationError({
+                    "showtime": "You cannot reserve a screening that has started."
+                })
+            
+    def __str__(self):
+        return f"{self.user} — {self.showtime} — {self.seat}"
