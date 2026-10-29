@@ -16,8 +16,10 @@
     <ul>
         {% for showtime in showtimes %}
             <li>
-                {{ showtime.starts_at|date:"M j, Y, g:i a" }}
-                — {{ showtime.auditorium.name }}
+                <a href="{% url 'movies:showtime_detail' showtime.id %}">
+                    {{ showtime.starts_at|date:"M j, Y, g:i a" }}
+                    — {{ showtime.auditorium.name }}
+                </a>
             </li>
         {% empty %}
             <li>No upcoming showtimes.</li>

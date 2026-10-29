@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ showtime.movie.title }} — Seats</title>
+</head>
+<body>
+    <a href="{% url 'movies:movie_detail' showtime.movie_id %}">
+        Back to movie
+    </a>
+
+    <h1>{{ showtime.movie.title }}</h1>
+    <p>{{ showtime.starts_at|date:"M j, Y, g:i a" }}</p>
+    <p>{{ showtime.auditorium.name }}</p>
+
+    <h2>Seats</h2>
+
+    <ul>
+        {% for seat in seats %}
+            <li>
+                {{ seat.row }}{{ seat.number }} —
+                {% if seat.id in reserved_seat_ids %}
+                    Reserved
+                {% else %}
+                    Available
+                {% endif %}
+            </li>
+        {% empty %}
+            <li>No seats have been added to this auditorium.</li>
+        {% endfor %}
+    </ul>
+</body>
+</html>
