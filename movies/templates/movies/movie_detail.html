@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ movie.title }}</title>
+</head>
+<body>
+    <a href="{% url 'movies:movie_list' %}">Back to movies</a>
+
+    <h1>{{ movie.title }}</h1>
+    <p>{{ movie.description }}</p>
+    <p>Duration: {{ movie.duration_minutes }} minutes</p>
+
+    <h2>Upcoming showtimes</h2>
+
+    <ul>
+        {% for showtime in showtimes %}
+            <li>
+                {{ showtime.starts_at|date:"M j, Y, g:i a" }}
+                — {{ showtime.auditorium.name }}
+            </li>
+        {% empty %}
+            <li>No upcoming showtimes.</li>
+        {% endfor %}
+    </ul>
+</body>
+</html>

@@ -9,7 +9,11 @@
 
     {% for movie in movies %}
         <article>
-            <h2>{{ movie.title }}</h2>
+            <h2>
+                <a href="{% url 'movies:movie_detail' movie.id %}">
+                    {{ movie.title }}
+                </a>
+            </h2>
             <p>{{ movie.description }}</p>
             <p>Duration: {{ movie.duration_minutes }} minutes</p>
         </article>
