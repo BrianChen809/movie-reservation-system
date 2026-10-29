@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Movies</title>
+</head>
+<body>
+    <h1>Movies</h1>
+
+    {% for movie in movies %}
+        <article>
+            <h2>{{ movie.title }}</h2>
+            <p>{{ movie.description }}</p>
+            <p>Duration: {{ movie.duration_minutes }} minutes</p>
+        </article>
+    {% empty %}
+        <p>No movies are available yet.</p>
+    {% endfor %}
+</body>
+</html>

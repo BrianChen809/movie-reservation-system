@@ -3,6 +3,7 @@ from django.utils import timezone
 
 from .models import Auditorium, Genre, Movie, Reservation, Seat, Showtime
 
+
 @admin.register(Seat)
 class SeatAdmin(admin.ModelAdmin):
     list_display = ("auditorium", "row", "number")
