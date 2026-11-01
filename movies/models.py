@@ -2,6 +2,7 @@ from django.db import models
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.utils import timezone
+from datetime import timedelta
 
 class Genre(models.Model):
     name = models.CharField(max_length=50, unique=True)
@@ -62,6 +63,37 @@ class Showtime(models.Model):
         on_delete=models.PROTECT,
         related_name="showtimes",
     )
+
+    def clean(self):
+        super().clean()
+
+        if not (self.movie_id and self.auditorium_id and self.starts_at):
+            return
+
+        ends_at = self.starts_at + timedelta(
+            minutes=self.movie.duration_minutes,
+        )
+
+        other_showtimes = (
+            Showtime.objects
+            .filter(
+                auditorium_id=self.auditorium_id,
+                starts_at__lt=ends_at,
+            )
+            .exclude(pk=self.pk)
+            .select_related("movie")
+        )
+
+        for other in other_showtimes:
+            other_ends_at = other.starts_at + timedelta(
+                minutes=other.movie.duration_minutes,
+            )
+
+            if self.starts_at < other_ends_at:
+                raise ValidationError(
+                    "This screening overlaps another screening "
+                    "in the same auditorium."
+                )
 
     def __str__(self):
         return f"{self.movie.title} — {self.starts_at}"
