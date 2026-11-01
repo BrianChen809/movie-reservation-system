@@ -23,6 +23,20 @@
                     Reserved
                 {% else %}
                     Available
+                    
+                    {% if user.is_authenticated %}
+                        <form
+                            method="post"
+                            action="{% url 'movies:reserve_seat' showtime.id seat.id %}"
+                        >
+                            {% csrf_token %}
+                            <button type="submit">Reserve</button>
+                        </form>
+                    {% else %}
+                        <a href="{% url 'login' %}?next={{ request.path|urlencode }}">
+                            Log in to reserve
+                        </a>
+                    {% endif %}
                 {% endif %}
             </li>
         {% empty %}
@@ -30,4 +44,7 @@
         {% endfor %}
     </ul>
 </body>
+{% for message in messages %}
+    <p>{{ message }}</p>
+{% endfor %}
 </html>

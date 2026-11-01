@@ -13,4 +13,9 @@ urlpatterns = [
         name="showtime_detail",
     ),
     path("signup/", views.signup, name="signup"),
+    path(
+        "showtimes/<int:showtime_id>/seats/<int:seat_id>/reserve/",
+        views.reserve_seat,
+        name="reserve_seat",
+    ),
 ]
