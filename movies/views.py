@@ -1,5 +1,6 @@
-from django.shortcuts import get_object_or_404, render
+from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
+from django.contrib.auth.forms import UserCreationForm
 
 from .models import Movie, Showtime
 
@@ -44,3 +45,18 @@ def showtime_detail(request, showtime_id):
             "reserved_seat_ids": reserved_seat_ids,
         },
     )
+
+def signup(request):
+    if request.user.is_authenticated:
+        return redirect("movies:movie_list")
+
+    if request.method == "POST":
+        form = UserCreationForm(request.POST)
+
+        if form.is_valid():
+            form.save()
+            return redirect("login")
+    else:
+        form = UserCreationForm()
+
+    return render(request, "registration/signup.html", {"form": form})

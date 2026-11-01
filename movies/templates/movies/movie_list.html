@@ -21,4 +21,15 @@
         <p>No movies are available yet.</p>
     {% endfor %}
 </body>
+{% if user.is_authenticated %}
+    <p>Logged in as {{ user.username }}</p>
+
+    <form method="post" action="{% url 'logout' %}">
+        {% csrf_token %}
+        <button type="submit">Log out</button>
+    </form>
+{% else %}
+    <a href="{% url 'login' %}">Log in</a>
+    <a href="{% url 'movies:signup' %}">Create an account</a>
+{% endif %}
 </html>

@@ -12,4 +12,5 @@ urlpatterns = [
         views.showtime_detail,
         name="showtime_detail",
     ),
+    path("signup/", views.signup, name="signup"),
 ]
