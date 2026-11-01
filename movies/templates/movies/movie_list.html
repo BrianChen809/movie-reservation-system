@@ -23,6 +23,9 @@
 </body>
 {% if user.is_authenticated %}
     <p>Logged in as {{ user.username }}</p>
+    <p>
+        <a href="{% url 'movies:my_reservations' %}">My reservations</a>
+    </p>
 
     <form method="post" action="{% url 'logout' %}">
         {% csrf_token %}

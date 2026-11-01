@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>My reservations</title>
+</head>
+<body>
+    <a href="{% url 'movies:movie_list' %}">Back to movies</a>
+
+    <h1>My reservations</h1>
+    {% for message in messages %}
+        <p>{{ message }}</p>
+    {% endfor %}
+
+    {% for reservation in reservations %}
+        {% if not reservation.cancelled_at and reservation.showtime.starts_at > now %}
+            <form
+                method="post"
+                action="{% url 'movies:cancel_reservation' reservation.id %}"
+            >
+                {% csrf_token %}
+                <button type="submit">Cancel reservation</button>
+            </form>
+        {% endif %}
+        <article>
+            <h2>{{ reservation.showtime.movie.title }}</h2>
+
+            <p>
+                {{ reservation.showtime.starts_at|date:"M j, Y, g:i a" }}
+                — {{ reservation.showtime.auditorium.name }}
+            </p>
+
+            <p>
+                Seat: {{ reservation.seat.row }}{{ reservation.seat.number }}
+            </p>
+
+            <p>
+                Status:
+                {% if reservation.cancelled_at %}
+                    Cancelled
+                {% else %}
+                    Active
+                {% endif %}
+            </p>
+
+            <a href="{% url 'movies:showtime_detail' reservation.showtime_id %}">
+                View screening
+            </a>
+        </article>
+    {% empty %}
+        <p>You haven't made any reservations yet.</p>
+    {% endfor %}
+</body>
+</html>

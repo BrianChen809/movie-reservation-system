@@ -111,3 +111,44 @@ def reserve_seat(request, showtime_id, seat_id):
         messages.success(request, "Your seat is booked!")
 
     return redirect("movies:showtime_detail", showtime_id=showtime.id)
+
+@login_required
+def my_reservations(request):
+    reservations = (
+        Reservation.objects
+        .filter(user=request.user)
+        .select_related("showtime__movie", "showtime__auditorium", "seat")
+        .order_by("-showtime__starts_at")
+    )
+
+    return render(
+        request,
+        "movies/my_reservations.html",
+        {"reservations": reservations, "now": timezone.now()},
+    )
+
+@login_required
+@require_POST
+def cancel_reservation(request, reservation_id):
+    reservation = get_object_or_404(
+        Reservation,
+        pk=reservation_id,
+        user=request.user,
+    )
+
+    count = Reservation.objects.filter(
+        pk=reservation.id,
+        user=request.user,
+        cancelled_at__isnull=True,
+        showtime__starts_at__gt=timezone.now(),
+    ).update(cancelled_at=timezone.now())
+
+    if count:
+        messages.success(request, "Your reservation has been cancelled.")
+    else:
+        messages.error(
+            request,
+            "This reservation is already cancelled or the screening has started.",
+        )
+
+    return redirect("movies:my_reservations")
