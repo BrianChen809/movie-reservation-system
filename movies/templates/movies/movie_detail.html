@@ -12,6 +12,21 @@
     <p>Duration: {{ movie.duration_minutes }} minutes</p>
 
     <h2>Upcoming showtimes</h2>
+    {% for message in messages %}
+        <p>{{ message }}</p>
+    {% endfor %}
+
+    <form method="get">
+        <label for="screening-date">Screening date:</label>
+        <input
+            type="date"
+            id="screening-date"
+            name="date"
+            value="{{ selected_date }}"
+        >
+        <button type="submit">Filter</button>
+        <a href="{% url 'movies:movie_detail' movie.id %}">Clear filter</a>
+    </form>
 
     <ul>
         {% for showtime in showtimes %}

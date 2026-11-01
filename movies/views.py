@@ -1,3 +1,5 @@
+from datetime import date
+
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import UserCreationForm
@@ -25,10 +27,27 @@ def movie_detail(request, movie_id):
         starts_at__gt=timezone.now(),
     ).order_by("starts_at")
 
+    selected_date = request.GET.get("date", "")
+
+    if selected_date:
+        try:
+            screening_date = date.fromisoformat(selected_date)
+        except ValueError:
+            messages.error(request, "Please choose a valid date.")
+            selected_date = ""
+        else:
+            showtimes = showtimes.filter(
+                starts_at__date=screening_date,
+            )
+
     return render(
         request,
         "movies/movie_detail.html",
-        {"movie": movie, "showtimes": showtimes},
+        {
+            "movie": movie,
+            "showtimes": showtimes,
+            "selected_date": selected_date,
+        },
     )
 
 def showtime_detail(request, showtime_id):
