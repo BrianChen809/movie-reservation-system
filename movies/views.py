@@ -48,6 +48,7 @@ def showtime_detail(request, showtime_id):
             "showtime": showtime,
             "seats": seats,
             "reserved_seat_ids": reserved_seat_ids,
+            "booking_open": showtime.starts_at > timezone.now(),
         },
     )
 

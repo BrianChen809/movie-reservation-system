@@ -13,6 +13,9 @@
     <p>{{ showtime.starts_at|date:"M j, Y, g:i a" }}</p>
     <p>{{ showtime.auditorium.name }}</p>
 
+    {% if not booking_open %}
+        <p>This screening has started. Booking is closed.</p>
+    {% endif %}
     <h2>Seats</h2>
 
     <ul>
@@ -21,9 +24,11 @@
                 {{ seat.row }}{{ seat.number }} —
                 {% if seat.id in reserved_seat_ids %}
                     Reserved
+                {% elif not booking_open %}
+                    Booking closed
                 {% else %}
                     Available
-                    
+
                     {% if user.is_authenticated %}
                         <form
                             method="post"
