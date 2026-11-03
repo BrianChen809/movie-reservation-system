@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Screening report</title>
+</head>
+<body>
+    <a href="{% url 'movies:movie_list' %}">Back to movies</a>
+
+    <h1>Screening report</h1>
+    <p>Totals include active reservations only. Payments are not tracked.</p>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Movie</th>
+                <th>Screening time</th>
+                <th>Room</th>
+                <th>Capacity</th>
+                <th>Booked</th>
+                <th>Available</th>
+                <th>Recorded booking value</th>
+                <th>Bookings missing prices</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in rows %}
+                <tr>
+                    <td>{{ row.showtime.movie.title }}</td>
+                    <td>{{ row.showtime.starts_at|date:"M j, Y, g:i a" }}</td>
+                    <td>{{ row.showtime.auditorium.name }}</td>
+                    <td>{{ row.capacity }}</td>
+                    <td>{{ row.booked }}</td>
+                    <td>{{ row.available }}</td>
+                    <td>${{ row.booking_value|floatformat:2 }}</td>
+                    <td>{{ row.missing_prices }}</td>
+                </tr>
+            {% empty %}
+                <tr>
+                    <td colspan="8">No screenings yet.</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</body>
+</html>

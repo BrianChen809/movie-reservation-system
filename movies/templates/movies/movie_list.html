@@ -27,6 +27,14 @@
         <a href="{% url 'movies:my_reservations' %}">My reservations</a>
     </p>
 
+    {% if user.is_staff %}
+        <p>
+            <a href="{% url 'movies:screening_report' %}">
+                Screening report
+            </a>
+        </p>
+    {% endif %}
+
     <form method="post" action="{% url 'logout' %}">
         {% csrf_token %}
         <button type="submit">Log out</button>

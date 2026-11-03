@@ -1,6 +1,8 @@
 from datetime import date
+from decimal import Decimal
 
 from django.contrib import messages
+from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import UserCreationForm
 from django.core.exceptions import ValidationError
@@ -173,3 +175,53 @@ def cancel_reservation(request, reservation_id):
         )
 
     return redirect("movies:my_reservations")
+
+@staff_member_required
+def screening_report(request):
+    showtimes = (
+        Showtime.objects
+        .select_related("movie", "auditorium")
+        .prefetch_related("auditorium__seats", "reservations")
+        .order_by("-starts_at")
+    )
+
+    rows = []
+
+    for showtime in showtimes:
+        active_reservations = [
+            reservation
+            for reservation in showtime.reservations.all()
+            if reservation.cancelled_at is None
+        ]
+
+        capacity = len(showtime.auditorium.seats.all())
+        booked = len(active_reservations)
+
+        booking_value = sum(
+            (
+                reservation.price_at_booking
+                for reservation in active_reservations
+                if reservation.price_at_booking is not None
+            ),
+            Decimal("0.00"),
+        )
+
+        missing_prices = sum(
+            reservation.price_at_booking is None
+            for reservation in active_reservations
+        )
+
+        rows.append({
+            "showtime": showtime,
+            "capacity": capacity,
+            "booked": booked,
+            "available": capacity - booked,
+            "booking_value": booking_value,
+            "missing_prices": missing_prices,
+        })
+
+    return render(
+        request,
+        "movies/screening_report.html",
+        {"rows": rows},
+    )

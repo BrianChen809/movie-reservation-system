@@ -28,4 +28,9 @@ urlpatterns = [
         views.cancel_reservation,
         name="cancel_reservation",
     ),
+    path(
+        "reports/screenings/",
+        views.screening_report,
+        name="screening_report",
+    ),
 ]
