@@ -1,8 +1,12 @@
-from django.db import models
+from datetime import timedelta
+from decimal import Decimal
+
 from django.conf import settings
 from django.core.exceptions import ValidationError
+from django.core.validators import MinValueValidator
+from django.db import models
 from django.utils import timezone
-from datetime import timedelta
+
 
 class Genre(models.Model):
     name = models.CharField(max_length=50, unique=True)
@@ -37,7 +41,7 @@ class Seat(models.Model):
 
     class Meta:
         ordering = ("row", "number")
-        constraints = [
+        constraints = [  # noqa: RUF012
             models.UniqueConstraint(
                 fields=["auditorium", "row", "number"],
                 name="unique_seat_per_auditorium",
@@ -62,6 +66,12 @@ class Showtime(models.Model):
         Auditorium,
         on_delete=models.PROTECT,
         related_name="showtimes",
+    )
+    ticket_price = models.DecimalField(
+        max_digits=8,
+        decimal_places=2,
+        default=Decimal("0.00"),
+        validators=[MinValueValidator(Decimal("0.00"))],
     )
 
     def clean(self):
@@ -118,7 +128,7 @@ class Reservation(models.Model):
     cancelled_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
-        constraints = [
+        constraints = [  # noqa: RUF012
             models.UniqueConstraint(
                 fields=["showtime", "seat"],
                 condition=models.Q(cancelled_at__isnull=True),
@@ -129,12 +139,12 @@ class Reservation(models.Model):
     def clean(self):
         super().clean()
 
-        if self.showtime_id and self.seat_id:
+        if self.showtime_id and self.seat_id:  # noqa: SIM102
             if self.seat.auditorium_id != self.showtime.auditorium_id:
                 raise ValidationError({
                     "seat": "Choose a seat in the showtime's auditorium."
                 })
-        if self.showtime_id and self._state.adding:
+        if self.showtime_id and self._state.adding:  # noqa: SIM102
             if self.showtime.starts_at <= timezone.now():
                 raise ValidationError({
                     "showtime": "You cannot reserve a screening that has started."

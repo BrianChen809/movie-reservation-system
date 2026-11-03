@@ -12,6 +12,7 @@
     <h1>{{ showtime.movie.title }}</h1>
     <p>{{ showtime.starts_at|date:"M j, Y, g:i a" }}</p>
     <p>{{ showtime.auditorium.name }}</p>
+    <p>Price per seat: ${{ showtime.ticket_price|floatformat:2 }}</p>
 
     {% if not booking_open %}
         <p>This screening has started. Booking is closed.</p>
