@@ -100,6 +100,7 @@ def reserve_seat(request, showtime_id, seat_id):
         user=request.user,
         showtime=showtime,
         seat=seat,
+        price_at_booking=showtime.ticket_price,
     )
 
     try:

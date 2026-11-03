@@ -126,6 +126,14 @@ class Reservation(models.Model):
     )
     created_at = models.DateTimeField(auto_now_add=True)
     cancelled_at = models.DateTimeField(null=True, blank=True)
+    price_at_booking = models.DecimalField(
+        max_digits=8,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        editable=False,
+        validators=[MinValueValidator(Decimal("0.00"))],
+    )
 
     class Meta:
         constraints = [  # noqa: RUF012

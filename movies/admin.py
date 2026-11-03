@@ -37,7 +37,7 @@ class ReservationAdmin(admin.ModelAdmin):
         "user", "showtime", "seat", "created_at", "cancelled_at",
     )
     list_filter = ("showtime",)
-    readonly_fields = ("created_at", "cancelled_at")
+    readonly_fields = ("created_at", "cancelled_at", "price_at_booking")
     actions = ("cancel_reservations",)
 
     @admin.action(description="Cancel selected upcoming reservations")
@@ -54,3 +54,9 @@ class ReservationAdmin(admin.ModelAdmin):
             f"Cancelled {count} reservation(s). "
             "Already cancelled or started screenings were skipped.",
         )
+
+    def save_model(self, request, obj, form, change):
+        if not change:
+            obj.price_at_booking = obj.showtime.ticket_price
+
+        super().save_model(request, obj, form, change)

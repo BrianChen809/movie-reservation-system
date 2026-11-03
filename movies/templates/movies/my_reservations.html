@@ -33,7 +33,16 @@
             <p>
                 Seat: {{ reservation.seat.row }}{{ reservation.seat.number }}
             </p>
-
+            
+            <p>
+                Price at booking:
+                {% if reservation.price_at_booking is not None %}
+                    ${{ reservation.price_at_booking|floatformat:2 }}
+                {% else %}
+                    Not recorded
+                {% endif %}
+            </p>
+            
             <p>
                 Status:
                 {% if reservation.cancelled_at %}
