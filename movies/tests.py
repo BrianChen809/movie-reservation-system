@@ -3,6 +3,7 @@ from decimal import Decimal
 
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
+from django.db import IntegrityError, transaction
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
@@ -361,4 +362,30 @@ class BookingTests(TestCase):
         self.assertEqual(
             list(response.context["reservations"]),
             [own_reservation],
+        )
+
+    def test_database_rejects_duplicate_active_reservations(self):
+        Reservation.objects.create(
+            user=self.user,
+            showtime=self.showtime,
+            seat=self.seat,
+            price_at_booking=Decimal("12.50"),
+        )
+
+        with self.assertRaises(IntegrityError):
+            with transaction.atomic():
+                Reservation.objects.create(
+                    user=self.other_user,
+                    showtime=self.showtime,
+                    seat=self.seat,
+                    price_at_booking=Decimal("12.50"),
+                )
+
+        self.assertEqual(
+            Reservation.objects.filter(
+                showtime=self.showtime,
+                seat=self.seat,
+                cancelled_at__isnull=True,
+            ).count(),
+            1,
         )
