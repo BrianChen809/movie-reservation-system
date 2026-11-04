@@ -153,3 +153,38 @@ class BookingTests(TestCase):
 
         reservation.refresh_from_db()
         self.assertIsNone(reservation.cancelled_at)
+
+    def test_booking_requires_login(self):
+        response = self.client.post(self.booking_url)
+
+        expected_url = (
+            f"{reverse('login')}?next={self.booking_url}"
+        )
+        self.assertRedirects(response, expected_url)
+        self.assertEqual(Reservation.objects.count(), 0)
+
+    def test_regular_user_cannot_access_screening_report(self):
+        self.client.force_login(self.user)
+        report_url = reverse("movies:screening_report")
+
+        response = self.client.get(report_url)
+
+        expected_url = (
+            f"{reverse('admin:login')}?next={report_url}"
+        )
+        self.assertRedirects(response, expected_url)
+
+    def test_staff_user_can_access_screening_report(self):
+        self.user.is_staff = True
+        self.user.save()
+        self.client.force_login(self.user)
+
+        response = self.client.get(
+            reverse("movies:screening_report"),
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(
+            response,
+            "movies/screening_report.html",
+        )
