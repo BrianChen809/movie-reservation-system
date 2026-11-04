@@ -2,6 +2,7 @@ from datetime import timedelta
 from decimal import Decimal
 
 from django.contrib.auth import get_user_model
+from django.core.exceptions import ValidationError
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
@@ -225,3 +226,51 @@ class BookingTests(TestCase):
             ),
         )
         self.assertEqual(Reservation.objects.count(), 0)
+
+    def test_overlapping_screening_in_same_room_is_rejected(self):
+        overlapping = Showtime(
+            movie=self.movie,
+            auditorium=self.auditorium,
+            starts_at=self.showtime.starts_at + timedelta(minutes=30),
+            ticket_price=Decimal("12.50"),
+        )
+
+        with self.assertRaises(ValidationError):
+            overlapping.full_clean()
+
+    def test_screening_can_start_when_previous_one_ends(self):
+        next_screening = Showtime(
+            movie=self.movie,
+            auditorium=self.auditorium,
+            starts_at=self.showtime.starts_at + timedelta(
+                minutes=self.movie.duration_minutes,
+            ),
+            ticket_price=Decimal("12.50"),
+        )
+
+        next_screening.full_clean()
+        next_screening.save()
+
+        self.assertTrue(
+            Showtime.objects.filter(pk=next_screening.pk).exists(),
+        )
+
+    def test_different_rooms_can_screen_movies_at_same_time(self):
+        other_auditorium = Auditorium.objects.create(
+            name="Other Screen",
+        )
+        simultaneous_screening = Showtime(
+            movie=self.movie,
+            auditorium=other_auditorium,
+            starts_at=self.showtime.starts_at,
+            ticket_price=Decimal("12.50"),
+        )
+
+        simultaneous_screening.full_clean()
+        simultaneous_screening.save()
+
+        self.assertTrue(
+            Showtime.objects.filter(
+                pk=simultaneous_screening.pk,
+            ).exists(),
+        )
