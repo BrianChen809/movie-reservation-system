@@ -326,3 +326,39 @@ class BookingTests(TestCase):
         self.assertEqual(row["available"], 1)
         self.assertEqual(row["booking_value"], Decimal("12.50"))
         self.assertEqual(row["missing_prices"], 1)
+
+    def test_my_reservations_only_shows_current_users_bookings(self):
+        second_seat = Seat.objects.create(
+            auditorium=self.auditorium,
+            row="A",
+            number=2,
+        )
+
+        own_reservation = Reservation.objects.create(
+            user=self.user,
+            showtime=self.showtime,
+            seat=self.seat,
+            price_at_booking=Decimal("12.50"),
+        )
+        Reservation.objects.create(
+            user=self.other_user,
+            showtime=self.showtime,
+            seat=second_seat,
+            price_at_booking=Decimal("12.50"),
+        )
+
+        self.client.force_login(self.user)
+
+        response = self.client.get(
+            reverse("movies:my_reservations"),
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(
+            response,
+            "movies/my_reservations.html",
+        )
+        self.assertEqual(
+            list(response.context["reservations"]),
+            [own_reservation],
+        )
