@@ -16,11 +16,27 @@ from .models import Movie, Reservation, Seat, Showtime
 
 def movie_list(request):
     movies = Movie.objects.order_by("title")
+    selected_date = request.GET.get("date", "")
+
+    if selected_date:
+        try:
+            screening_date = date.fromisoformat(selected_date)
+        except ValueError:
+            messages.error(request, "Please choose a valid date.")
+            selected_date = ""
+        else:
+            movies = movies.filter(
+                showtimes__starts_at__date=screening_date,
+                showtimes__starts_at__gt=timezone.now(),
+            ).distinct()
 
     return render(
         request,
         "movies/movie_list.html",
-        {"movies": movies},
+        {
+            "movies": movies,
+            "selected_date": selected_date,
+        },
     )
 
 def movie_detail(request, movie_id):

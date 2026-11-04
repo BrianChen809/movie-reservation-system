@@ -7,10 +7,26 @@
 <body>
     <h1>Movies</h1>
 
+    {% for message in messages %}
+        <p>{{ message }}</p>
+    {% endfor %}
+
+    <form method="get">
+        <label for="movie-date">Screening date:</label>
+        <input
+            type="date"
+            id="movie-date"
+            name="date"
+            value="{{ selected_date }}"
+        >
+        <button type="submit">Filter</button>
+        <a href="{% url 'movies:movie_list' %}">Clear filter</a>
+    </form>
+
     {% for movie in movies %}
         <article>
             <h2>
-                <a href="{% url 'movies:movie_detail' movie.id %}">
+                <a href="{% url 'movies:movie_detail' movie.id %}{% if selected_date %}?date={{ selected_date|urlencode }}{% endif %}">
                     {{ movie.title }}
                 </a>
             </h2>
