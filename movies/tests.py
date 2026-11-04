@@ -274,3 +274,55 @@ class BookingTests(TestCase):
                 pk=simultaneous_screening.pk,
             ).exists(),
         )
+
+    def test_report_totals_exclude_cancelled_reservations(self):
+        second_seat = Seat.objects.create(
+            auditorium=self.auditorium,
+            row="A",
+            number=2,
+        )
+        third_seat = Seat.objects.create(
+            auditorium=self.auditorium,
+            row="A",
+            number=3,
+        )
+
+        Reservation.objects.create(
+            user=self.user,
+            showtime=self.showtime,
+            seat=self.seat,
+            price_at_booking=Decimal("12.50"),
+        )
+        Reservation.objects.create(
+            user=self.user,
+            showtime=self.showtime,
+            seat=second_seat,
+            price_at_booking=Decimal("20.00"),
+            cancelled_at=timezone.now(),
+        )
+        Reservation.objects.create(
+            user=self.other_user,
+            showtime=self.showtime,
+            seat=third_seat,
+            price_at_booking=None,
+        )
+
+        self.user.is_staff = True
+        self.user.save()
+        self.client.force_login(self.user)
+
+        response = self.client.get(
+            reverse("movies:screening_report"),
+        )
+
+        self.assertEqual(response.status_code, 200)
+
+        rows = response.context["rows"]
+        self.assertEqual(len(rows), 1)
+
+        row = rows[0]
+        self.assertEqual(row["capacity"], 3)
+        self.assertEqual(row["booked"], 2)
+        self.assertEqual(row["available"], 1)
+        self.assertEqual(row["booking_value"], Decimal("12.50"))
+        self.assertEqual(row["missing_prices"], 1)
