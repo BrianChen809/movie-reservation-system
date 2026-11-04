@@ -81,3 +81,75 @@ class BookingTests(TestCase):
             1,
         )
         self.assertEqual(Reservation.objects.get().user_id, self.user.pk)
+
+    def test_cancellation_releases_seat_for_another_user(self):
+        self.client.force_login(self.user)
+        self.client.post(self.booking_url)
+        reservation = Reservation.objects.get()
+
+        response = self.client.post(
+            reverse(
+                "movies:cancel_reservation",
+                args=[reservation.pk],
+            ),
+        )
+
+        self.assertRedirects(
+            response,
+            reverse("movies:my_reservations"),
+        )
+
+        reservation.refresh_from_db()
+        self.assertIsNotNone(reservation.cancelled_at)
+
+        self.client.force_login(self.other_user)
+        self.client.post(self.booking_url)
+
+        active_reservation = Reservation.objects.get(
+            showtime=self.showtime,
+            seat=self.seat,
+            cancelled_at__isnull=True,
+        )
+        self.assertEqual(active_reservation.user_id, self.other_user.pk)
+        self.assertEqual(Reservation.objects.count(), 2)
+
+    def test_user_cannot_cancel_someone_elses_reservation(self):
+        self.client.force_login(self.user)
+        self.client.post(self.booking_url)
+        reservation = Reservation.objects.get()
+
+        self.client.force_login(self.other_user)
+        response = self.client.post(
+            reverse(
+                "movies:cancel_reservation",
+                args=[reservation.pk],
+            ),
+        )
+
+        self.assertEqual(response.status_code, 404)
+
+        reservation.refresh_from_db()
+        self.assertIsNone(reservation.cancelled_at)
+
+    def test_user_cannot_cancel_started_screening(self):
+        self.client.force_login(self.user)
+        self.client.post(self.booking_url)
+        reservation = Reservation.objects.get()
+
+        self.showtime.starts_at = timezone.now() - timedelta(minutes=1)
+        self.showtime.save()
+
+        response = self.client.post(
+            reverse(
+                "movies:cancel_reservation",
+                args=[reservation.pk],
+            ),
+        )
+
+        self.assertRedirects(
+            response,
+            reverse("movies:my_reservations"),
+        )
+
+        reservation.refresh_from_db()
+        self.assertIsNone(reservation.cancelled_at)
