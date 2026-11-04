@@ -188,3 +188,40 @@ class BookingTests(TestCase):
             response,
             "movies/screening_report.html",
         )
+
+    def test_user_cannot_book_seat_in_another_auditorium(self):
+        other_auditorium = Auditorium.objects.create(
+            name="Other Screen",
+        )
+        other_seat = Seat.objects.create(
+            auditorium=other_auditorium,
+            row="A",
+            number=1,
+        )
+        self.client.force_login(self.user)
+
+        response = self.client.post(
+            reverse(
+                "movies:reserve_seat",
+                args=[self.showtime.pk, other_seat.pk],
+            ),
+        )
+
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(Reservation.objects.count(), 0)
+
+    def test_user_cannot_book_started_screening(self):
+        self.showtime.starts_at = timezone.now() - timedelta(minutes=1)
+        self.showtime.save()
+        self.client.force_login(self.user)
+
+        response = self.client.post(self.booking_url)
+
+        self.assertRedirects(
+            response,
+            reverse(
+                "movies:showtime_detail",
+                args=[self.showtime.pk],
+            ),
+        )
+        self.assertEqual(Reservation.objects.count(), 0)
