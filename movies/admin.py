@@ -60,3 +60,14 @@ class ReservationAdmin(admin.ModelAdmin):
             obj.price_at_booking = obj.showtime.ticket_price
 
         super().save_model(request, obj, form, change)
+
+    def get_readonly_fields(self, request, obj=None):
+        fields = super().get_readonly_fields(request, obj)
+
+        if obj is not None:
+            return (*fields, "user", "showtime", "seat")
+
+        return fields
+
+    def has_delete_permission(self, request, obj=None):
+        return False
