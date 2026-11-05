@@ -77,6 +77,20 @@ class Showtime(models.Model):
     def clean(self):
         super().clean()
 
+        if self.pk:
+            original = Showtime.objects.get(pk=self.pk)
+
+            if (
+                self.auditorium_id != original.auditorium_id
+                and self.reservations.exists()
+            ):
+                raise ValidationError({
+                    "auditorium": (
+                        "You cannot change the auditorium of a screening "
+                        "that has reservation history."
+                    ),
+                })
+
         if not (self.movie_id and self.auditorium_id and self.starts_at):
             return
 
@@ -104,9 +118,6 @@ class Showtime(models.Model):
                     "This screening overlaps another screening "
                     "in the same auditorium."
                 )
-
-    def __str__(self):
-        return f"{self.movie.title} — {self.starts_at}"
 
 class Reservation(models.Model):
     user = models.ForeignKey(
@@ -146,7 +157,7 @@ class Reservation(models.Model):
 
     def clean(self):
         super().clean()
-
+        
         if self.showtime_id and self.seat_id:  # noqa: SIM102
             if self.seat.auditorium_id != self.showtime.auditorium_id:
                 raise ValidationError({
