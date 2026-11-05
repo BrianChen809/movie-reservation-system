@@ -389,3 +389,44 @@ class BookingTests(TestCase):
             ).count(),
             1,
         )
+
+    def test_booked_screening_cannot_change_auditorium(self):
+        Reservation.objects.create(
+            user=self.user,
+            showtime=self.showtime,
+            seat=self.seat,
+            price_at_booking=Decimal("12.50"),
+        )
+        other_auditorium = Auditorium.objects.create(
+            name="Other Screen",
+        )
+
+        self.showtime.auditorium = other_auditorium
+
+        with self.assertRaises(ValidationError) as error:
+            self.showtime.full_clean()
+
+        self.assertIn("auditorium", error.exception.message_dict)
+
+        self.showtime.refresh_from_db()
+        self.assertEqual(
+            self.showtime.auditorium_id,
+            self.auditorium.pk,
+        )
+
+    def test_unbooked_screening_can_change_auditorium(self):
+        other_auditorium = Auditorium.objects.create(
+            name="Other Screen",
+        )
+
+        self.showtime.auditorium = other_auditorium
+        self.showtime.full_clean()
+        self.showtime.save()
+
+        self.showtime.refresh_from_db()
+        self.assertEqual(
+            self.showtime.auditorium_id,
+            other_auditorium.pk,
+        )
+
+    
