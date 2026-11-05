@@ -52,6 +52,26 @@ class Seat(models.Model):
             ),
         ]
 
+    def clean(self):
+        super().clean()
+
+        if not self.pk:
+            return
+
+        original = Seat.objects.get(pk=self.pk)
+
+        seat_changed = (
+            self.auditorium_id != original.auditorium_id
+            or self.row != original.row
+            or self.number != original.number
+        )
+
+        if seat_changed and self.reservations.exists():
+            raise ValidationError(
+                "You cannot move or rename a seat "
+                "that has reservation history."
+            )
+
     def __str__(self):
         return f"{self.auditorium.name} — {self.row}{self.number}"
 
