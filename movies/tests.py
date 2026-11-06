@@ -1,8 +1,11 @@
 from datetime import timedelta
 from decimal import Decimal
+from io import StringIO
 
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Group
 from django.core.exceptions import ValidationError
+from django.core.management import call_command
 from django.db import IntegrityError, transaction
 from django.test import TestCase
 from django.urls import reverse
@@ -506,3 +509,52 @@ class BookingTests(TestCase):
 
         movie.refresh_from_db()
         self.assertEqual(movie.duration_minutes, 100)
+
+class RoleSetupTests(TestCase):
+    def test_setup_roles_assigns_expected_permissions(self):
+        call_command("setup_roles", stdout=StringIO())
+
+        group = Group.objects.get(name="Cinema admins")
+
+        actual_permissions = set(
+            group.permissions.values_list(
+                "content_type__app_label",
+                "codename",
+            )
+        )
+
+        expected_permissions = {
+            ("movies", f"{action}_{model}")
+            for model in [
+                "auditorium",
+                "genre",
+                "movie",
+                "reservation",
+                "seat",
+                "showtime",
+            ]
+            for action in ["add", "change", "delete", "view"]
+        }
+
+        self.assertEqual(actual_permissions, expected_permissions)
+
+    def test_repeated_setup_preserves_group_members(self):
+        call_command("setup_roles", stdout=StringIO())
+
+        group = Group.objects.get(name="Cinema admins")
+        user = get_user_model().objects.create_user(
+            username="cinema_admin",
+            is_staff=True,
+        )
+        user.groups.add(group)
+
+        call_command("setup_roles", stdout=StringIO())
+
+        self.assertEqual(
+            Group.objects.filter(name="Cinema admins").count(),
+            1,
+        )
+        self.assertTrue(
+            user.groups.filter(pk=group.pk).exists(),
+        )
+        self.assertEqual(group.permissions.count(), 24)
