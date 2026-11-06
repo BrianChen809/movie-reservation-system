@@ -36,7 +36,6 @@
     {% empty %}
         <p>No movies are available yet.</p>
     {% endfor %}
-</body>
 {% if user.is_authenticated %}
     <p>Logged in as {{ user.username }}</p>
     <p>
@@ -59,4 +58,5 @@
     <a href="{% url 'login' %}">Log in</a>
     <a href="{% url 'movies:signup' %}">Create an account</a>
 {% endif %}
+</body>
 </html>

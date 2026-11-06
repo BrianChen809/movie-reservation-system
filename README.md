@@ -8,6 +8,7 @@ https://roadmap.sh/projects/movie-reservation-system
 - User signup, login, and logout.
 - Movies, genres, auditoriums, seats, and showtimes.
 - Movie and screening browsing with date filtering.
+- Movie detail pages display poster images and assigned genres.
 - Seat availability and authenticated booking.
 - Personal reservation history and cancellation.
 - Ticket prices preserved at booking.
@@ -168,8 +169,10 @@ scheduling validation, reservation prices, and simultaneous booking.
 - Existing reservations cannot be reassigned or deleted through the admin.
 - Seats with reservation history cannot be moved or renamed through
   admin forms.
-- Screenings with reservation history cannot change auditorium through
-  admin forms.
+- Screenings with reservation history cannot change movie, auditorium,
+  or start time through admin forms, including when all bookings were cancelled.
+  Create a new screening instead. Ticket prices remain editable for future
+  bookings; existing reservations keep their recorded prices.
 - Movie duration cannot change through admin forms once showtimes exist.
 - Scheduling validation runs through model validation; direct database
   updates can bypass it.

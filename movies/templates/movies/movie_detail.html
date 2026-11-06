@@ -8,6 +8,23 @@
     <a href="{% url 'movies:movie_list' %}">Back to movies</a>
 
     <h1>{{ movie.title }}</h1>
+    {% if movie.poster_url %}
+        <img
+            src="{{ movie.poster_url }}"
+            alt="Poster for {{ movie.title }}"
+            width="200"
+        >
+    {% endif %}
+
+    <p>
+        Genres:
+        {% for genre in movie.genres.all %}
+            {{ genre.name }}{% if not forloop.last %}, {% endif %}
+        {% empty %}
+            Not specified
+        {% endfor %}
+    </p>
+
     <p>{{ movie.description }}</p>
     <p>Duration: {{ movie.duration_minutes }} minutes</p>
 

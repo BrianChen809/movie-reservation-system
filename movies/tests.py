@@ -14,7 +14,7 @@ from django.test import Client, TestCase, TransactionTestCase
 from django.urls import reverse
 from django.utils import timezone
 
-from .models import Auditorium, Movie, Reservation, Seat, Showtime
+from .models import Auditorium, Genre, Movie, Reservation, Seat, Showtime
 
 
 class BookingTests(TestCase):
@@ -511,6 +511,116 @@ class BookingTests(TestCase):
 
         movie.refresh_from_db()
         self.assertEqual(movie.duration_minutes, 100)
+
+    def test_reservation_history_protects_screening_movie_and_time(self):
+        reservation = Reservation.objects.create(
+            user=self.user,
+            showtime=self.showtime,
+            seat=self.seat,
+            price_at_booking=Decimal("12.50"),
+        )
+        other_movie = Movie.objects.create(
+            title="Another Movie",
+            description="A different movie.",
+            duration_minutes=90,
+        )
+
+        for cancelled_at in (None, timezone.now()):
+            reservation.cancelled_at = cancelled_at
+            reservation.save()
+
+            for field, value in (
+                ("movie", other_movie),
+                ("starts_at", self.showtime.starts_at + timedelta(days=1)),
+            ):
+                with self.subTest(cancelled=cancelled_at is not None, field=field):
+                    screening = Showtime.objects.get(pk=self.showtime.pk)
+                    setattr(screening, field, value)
+
+                    with self.assertRaises(ValidationError) as error:
+                        screening.full_clean()
+
+                    self.assertIn(field, error.exception.message_dict)
+
+    def test_unbooked_screening_can_change_movie_and_time(self):
+        other_movie = Movie.objects.create(
+            title="Another Movie",
+            description="A different movie.",
+            duration_minutes=90,
+        )
+        new_start = self.showtime.starts_at + timedelta(days=1)
+        self.showtime.movie = other_movie
+        self.showtime.starts_at = new_start
+        self.showtime.full_clean()
+        self.showtime.save()
+
+        self.showtime.refresh_from_db()
+        self.assertEqual(self.showtime.movie_id, other_movie.pk)
+        self.assertEqual(self.showtime.starts_at, new_start)
+
+    def test_booked_screening_price_remains_editable(self):
+        reservation = Reservation.objects.create(
+            user=self.user,
+            showtime=self.showtime,
+            seat=self.seat,
+            price_at_booking=Decimal("12.50"),
+        )
+        self.showtime.ticket_price = Decimal("15.00")
+        self.showtime.full_clean()
+        self.showtime.save()
+
+        self.showtime.refresh_from_db()
+        reservation.refresh_from_db()
+        self.assertEqual(self.showtime.ticket_price, Decimal("15.00"))
+        self.assertEqual(reservation.price_at_booking, Decimal("12.50"))
+
+    def test_admin_cannot_reschedule_booked_screening(self):
+        Reservation.objects.create(
+            user=self.user,
+            showtime=self.showtime,
+            seat=self.seat,
+            price_at_booking=Decimal("12.50"),
+        )
+        admin_user = get_user_model().objects.create_superuser(
+            username="schedule_admin",
+            password="test-only-password",
+        )
+        self.client.force_login(admin_user)
+        new_start = timezone.localtime(
+            self.showtime.starts_at + timedelta(days=1),
+        )
+
+        response = self.client.post(
+            reverse("admin:movies_showtime_change", args=[self.showtime.pk]),
+            {
+                "movie": self.movie.pk,
+                "auditorium": self.auditorium.pk,
+                "starts_at_0": new_start.strftime("%Y-%m-%d"),
+                "starts_at_1": new_start.strftime("%H:%M:%S"),
+                "ticket_price": "12.50",
+                "_save": "Save",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("starts_at", response.context["adminform"].form.errors)
+        original_start = self.showtime.starts_at
+        self.showtime.refresh_from_db()
+        self.assertEqual(self.showtime.starts_at, original_start)
+
+    def test_movie_detail_displays_poster_and_genres(self):
+        self.movie.poster_url = "https://example.com/poster.jpg"
+        self.movie.save()
+        self.movie.genres.add(Genre.objects.create(name="Action"))
+
+        response = self.client.get(
+            reverse("movies:movie_detail", args=[self.movie.pk]),
+        )
+
+        self.assertContains(response, 'src="https://example.com/poster.jpg"')
+        self.assertContains(response, 'alt="Poster for Test Movie"')
+        self.assertContains(response, "Action")
+
 
 class RoleSetupTests(TestCase):
     def test_setup_roles_assigns_expected_permissions(self):

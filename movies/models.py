@@ -119,16 +119,18 @@ class Showtime(models.Model):
         if self.pk:
             original = Showtime.objects.get(pk=self.pk)
 
-            if (
-                self.auditorium_id != original.auditorium_id
-                and self.reservations.exists()
-            ):
-                raise ValidationError({
-                    "auditorium": (
-                        "You cannot change the auditorium of a screening "
-                        "that has reservation history."
-                    ),
-                })
+            if self.reservations.exists():
+                errors = {}
+                for field in ("movie", "auditorium", "starts_at"):
+                    attribute = f"{field}_id" if field != "starts_at" else field
+                    if getattr(self, attribute) != getattr(original, attribute):
+                        errors[field] = (
+                            "You cannot change this field for a screening "
+                            "that has reservation history."
+                        )
+
+                if errors:
+                    raise ValidationError(errors)
 
         if not (self.movie_id and self.auditorium_id and self.starts_at):
             return
@@ -157,6 +159,14 @@ class Showtime(models.Model):
                     "This screening overlaps another screening "
                     "in the same auditorium."
                 )
+
+    def __str__(self):
+        starts_at = timezone.localtime(self.starts_at)
+        return (
+            f"{self.movie.title} — {self.auditorium.name} — "
+            f"{starts_at:%Y-%m-%d %H:%M %Z}"
+        )
+
 
 class Reservation(models.Model):
     user = models.ForeignKey(
