@@ -1,13 +1,16 @@
+from concurrent.futures import ThreadPoolExecutor
 from datetime import timedelta
 from decimal import Decimal
 from io import StringIO
+from threading import Barrier
+from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 from django.core.exceptions import ValidationError
 from django.core.management import call_command
-from django.db import IntegrityError, transaction
-from django.test import TestCase
+from django.db import IntegrityError, close_old_connections, connections, transaction
+from django.test import Client, TestCase, TransactionTestCase
 from django.urls import reverse
 from django.utils import timezone
 
@@ -607,3 +610,85 @@ class RoleSetupTests(TestCase):
         regular_user.refresh_from_db()
         self.assertFalse(regular_user.is_staff)
         self.assertFalse(regular_user.is_superuser)
+
+class ConcurrentBookingTests(TransactionTestCase):
+    def test_simultaneous_bookings_only_reserve_seat_once(self):
+        User = get_user_model()
+        first_user = User.objects.create_user(username="first_customer")
+        second_user = User.objects.create_user(username="second_customer")
+
+        movie = Movie.objects.create(
+            title="Concurrent Booking Movie",
+            description="A screening for simultaneous booking tests.",
+            duration_minutes=120,
+        )
+        auditorium = Auditorium.objects.create(name="Concurrent Screen")
+        seat = Seat.objects.create(
+            auditorium=auditorium,
+            row="A",
+            number=1,
+        )
+        showtime = Showtime.objects.create(
+            movie=movie,
+            auditorium=auditorium,
+            starts_at=timezone.now() + timedelta(days=7),
+            ticket_price=Decimal("12.50"),
+        )
+        booking_url = reverse(
+            "movies:reserve_seat",
+            args=[showtime.pk, seat.pk],
+        )
+
+        first_client = Client()
+        first_client.force_login(first_user)
+
+        second_client = Client()
+        second_client.force_login(second_user)
+
+        barrier = Barrier(2)
+        original_full_clean = Reservation.full_clean
+
+        def synchronized_full_clean(reservation, *args, **kwargs):
+            original_full_clean(reservation, *args, **kwargs)
+            barrier.wait(timeout=30)
+
+        def book(client):
+            close_old_connections()
+
+            try:
+                return client.post(booking_url)
+            finally:
+                connections.close_all()
+
+        with patch.object(
+            Reservation,
+            "full_clean",
+            synchronized_full_clean,
+        ):
+            with ThreadPoolExecutor(max_workers=2) as executor:
+                first_attempt = executor.submit(book, first_client)
+                second_attempt = executor.submit(book, second_client)
+
+                first_response = first_attempt.result(timeout=30)
+                second_response = second_attempt.result(timeout=30)
+
+        expected_url = reverse(
+            "movies:showtime_detail",
+            args=[showtime.pk],
+        )
+
+        self.assertEqual(first_response.status_code, 302)
+        self.assertEqual(second_response.status_code, 302)
+        self.assertEqual(first_response.url, expected_url)
+        self.assertEqual(second_response.url, expected_url)
+
+        reservations = Reservation.objects.filter(
+            showtime=showtime,
+            seat=seat,
+            cancelled_at__isnull=True,
+        )
+        self.assertEqual(reservations.count(), 1)
+        self.assertIn(
+            reservations.get().user_id,
+            [first_user.pk, second_user.pk],
+        )
