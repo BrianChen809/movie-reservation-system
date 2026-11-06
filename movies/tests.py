@@ -558,3 +558,52 @@ class RoleSetupTests(TestCase):
             user.groups.filter(pk=group.pk).exists(),
         )
         self.assertEqual(group.permissions.count(), 24)
+
+    def test_cinema_admin_can_manage_movies_but_not_users(self):
+        call_command("setup_roles", stdout=StringIO())
+
+        User = get_user_model()
+        cinema_admin = User.objects.create_user(
+            username="cinema_manager",
+            is_staff=True,
+        )
+        cinema_admin.groups.add(
+            Group.objects.get(name="Cinema admins"),
+        )
+        regular_user = User.objects.create_user(
+            username="regular_customer",
+        )
+
+        self.client.force_login(cinema_admin)
+
+        movie_list_response = self.client.get(
+            reverse("admin:movies_movie_changelist"),
+        )
+        movie_add_response = self.client.get(
+            reverse("admin:movies_movie_add"),
+        )
+        user_list_response = self.client.get(
+            reverse("admin:auth_user_changelist"),
+        )
+        promotion_response = self.client.post(
+            reverse(
+                "admin:auth_user_change",
+                args=[regular_user.pk],
+            ),
+            {
+                "username": regular_user.username,
+                "is_active": "on",
+                "is_staff": "on",
+                "is_superuser": "on",
+                "_save": "Save",
+            },
+        )
+
+        self.assertEqual(movie_list_response.status_code, 200)
+        self.assertEqual(movie_add_response.status_code, 200)
+        self.assertEqual(user_list_response.status_code, 403)
+        self.assertEqual(promotion_response.status_code, 403)
+
+        regular_user.refresh_from_db()
+        self.assertFalse(regular_user.is_staff)
+        self.assertFalse(regular_user.is_superuser)
