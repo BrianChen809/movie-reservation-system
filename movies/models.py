@@ -21,6 +21,25 @@ class Movie(models.Model):
     duration_minutes = models.PositiveIntegerField()
     genres = models.ManyToManyField(Genre, blank=True)
 
+    def clean(self):
+        super().clean()
+
+        if not self.pk:
+            return
+
+        original = Movie.objects.get(pk=self.pk)
+
+        if (
+            self.duration_minutes != original.duration_minutes
+            and self.showtimes.exists()
+        ):
+            raise ValidationError({
+                "duration_minutes": (
+                    "You cannot change the duration of a movie "
+                    "that has scheduled screenings."
+                ),
+            })
+
     def __str__(self):
         return self.title
 
