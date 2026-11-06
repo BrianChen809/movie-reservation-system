@@ -378,14 +378,13 @@ class BookingTests(TestCase):
             price_at_booking=Decimal("12.50"),
         )
 
-        with self.assertRaises(IntegrityError):
-            with transaction.atomic():
-                Reservation.objects.create(
-                    user=self.other_user,
-                    showtime=self.showtime,
-                    seat=self.seat,
-                    price_at_booking=Decimal("12.50"),
-                )
+        with self.assertRaises(IntegrityError), transaction.atomic():
+            Reservation.objects.create(
+                user=self.other_user,
+                showtime=self.showtime,
+                seat=self.seat,
+                price_at_booking=Decimal("12.50"),
+            )
 
         self.assertEqual(
             Reservation.objects.filter(
@@ -664,13 +663,12 @@ class ConcurrentBookingTests(TransactionTestCase):
             Reservation,
             "full_clean",
             synchronized_full_clean,
-        ):
-            with ThreadPoolExecutor(max_workers=2) as executor:
-                first_attempt = executor.submit(book, first_client)
-                second_attempt = executor.submit(book, second_client)
+        ), ThreadPoolExecutor(max_workers=2) as executor:
+            first_attempt = executor.submit(book, first_client)
+            second_attempt = executor.submit(book, second_client)
 
-                first_response = first_attempt.result(timeout=30)
-                second_response = second_attempt.result(timeout=30)
+            first_response = first_attempt.result(timeout=30)
+            second_response = second_attempt.result(timeout=30)
 
         expected_url = reverse(
             "movies:showtime_detail",
