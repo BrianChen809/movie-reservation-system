@@ -478,3 +478,31 @@ class BookingTests(TestCase):
         )
         self.assertEqual(self.seat.row, "B")
         self.assertEqual(self.seat.number, 2)
+
+    def test_movie_with_showtimes_cannot_change_duration(self):
+        self.movie.duration_minutes = 150
+
+        with self.assertRaises(ValidationError) as error:
+            self.movie.full_clean()
+
+        self.assertIn(
+            "duration_minutes",
+            error.exception.message_dict,
+        )
+
+        self.movie.refresh_from_db()
+        self.assertEqual(self.movie.duration_minutes, 120)
+
+    def test_movie_without_showtimes_can_change_duration(self):
+        movie = Movie.objects.create(
+            title="Unscheduled Movie",
+            description="A movie without screenings.",
+            duration_minutes=90,
+        )
+
+        movie.duration_minutes = 100
+        movie.full_clean()
+        movie.save()
+
+        movie.refresh_from_db()
+        self.assertEqual(movie.duration_minutes, 100)
