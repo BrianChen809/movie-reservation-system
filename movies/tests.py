@@ -429,4 +429,52 @@ class BookingTests(TestCase):
             other_auditorium.pk,
         )
 
-    
+    def test_seat_with_reservation_history_cannot_change(self):
+        Reservation.objects.create(
+            user=self.user,
+            showtime=self.showtime,
+            seat=self.seat,
+            price_at_booking=Decimal("12.50"),
+            cancelled_at=timezone.now(),
+        )
+        other_auditorium = Auditorium.objects.create(
+            name="Other Screen",
+        )
+
+        changes = {
+            "auditorium": other_auditorium,
+            "row": "B",
+            "number": 2,
+        }
+
+        for field, value in changes.items():
+            with self.subTest(field=field):
+                seat = Seat.objects.get(pk=self.seat.pk)
+                setattr(seat, field, value)
+
+                with self.assertRaises(ValidationError):
+                    seat.full_clean()
+
+        self.seat.refresh_from_db()
+        self.assertEqual(self.seat.auditorium_id, self.auditorium.pk)
+        self.assertEqual(self.seat.row, "A")
+        self.assertEqual(self.seat.number, 1)
+
+    def test_unused_seat_can_change(self):
+        other_auditorium = Auditorium.objects.create(
+            name="Other Screen",
+        )
+
+        self.seat.auditorium = other_auditorium
+        self.seat.row = "B"
+        self.seat.number = 2
+        self.seat.full_clean()
+        self.seat.save()
+
+        self.seat.refresh_from_db()
+        self.assertEqual(
+            self.seat.auditorium_id,
+            other_auditorium.pk,
+        )
+        self.assertEqual(self.seat.row, "B")
+        self.assertEqual(self.seat.number, 2)
